@@ -1,2 +1,2 @@
-# tilemap_editor
-A simple tilemap editor
+# Tile-map Editor
+A simple tilemap editor.

@@ -8,7 +8,7 @@ import sys
 
 from PySide2 import QtCore
 from PySide2.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QMainWindow, \
-    QAction, QSlider, QDialog, QLabel, QScrollArea
+    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter
 from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor
 from PySide2.QtCore import Qt, QTimer, QSize, QPoint
 
@@ -160,14 +160,15 @@ class MainWindow(QMainWindow):
         self.pixmap = QPixmap(tile_image)
         self._tile = 1
 
-        self.setCentralWidget(QWidget())
         self.home()
 
     def home(self):
         """
         Add the GUI elements to the window that represent the home state of the application.
         """
-        layout = QVBoxLayout()
+        splitter = QSplitter(self)
+        splitter.setOrientation(Qt.Vertical)
+        splitter.setHandleWidth(16)
 
         self.tile_ed = TileEd(self.size, self.tile_size,
                               self.pixmap, self)
@@ -176,9 +177,7 @@ class MainWindow(QMainWindow):
         scroll_area_tile_ed.setWidgetResizable(True)
         scroll_area_tile_ed.setWidget(self.tile_ed)
 
-        layout.addWidget(scroll_area_tile_ed)
-
-        layout.addSpacing(10)
+        splitter.addWidget(scroll_area_tile_ed)
 
         self.tile_sel = TileSelector(self.tile_size, self.pixmap, self)
         scroll_area_tile_sel = QScrollArea()
@@ -186,9 +185,8 @@ class MainWindow(QMainWindow):
         scroll_area_tile_sel.setWidgetResizable(True)
         scroll_area_tile_sel.setWidget(self.tile_sel)
 
-        layout.addWidget(scroll_area_tile_sel)
-
-        self.centralWidget().setLayout(layout)
+        splitter.addWidget(scroll_area_tile_sel)
+        self.setCentralWidget(splitter)
 
     @property
     def tile(self):
