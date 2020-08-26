@@ -5,10 +5,11 @@
 Application that runs the landscape generator program.
 """
 import sys
+import json
 
 from PySide2 import QtCore
 from PySide2.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QMainWindow, \
-    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter
+    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog
 from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor
 from PySide2.QtCore import Qt, QTimer, QSize, QPoint
 
@@ -146,6 +147,11 @@ class TileEd(QWidget):
         self.update()
         return super().mouseMoveEvent(event)
 
+    def encode_to_JSON(self):
+        rdict = dict()
+        rdict["data"] = self.data
+        return rdict
+
 
 class MainWindow(QMainWindow):
     """
@@ -155,10 +161,11 @@ class MainWindow(QMainWindow):
     def __init__(self, size, tile_size, tile_image, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self.tile_image = tile_image
         self.size = size
         self.tile_size = tile_size
         self.pixmap = QPixmap(tile_image)
-        self._tile = 1
+        self._tile = 0
 
         self.home()
 
@@ -166,6 +173,18 @@ class MainWindow(QMainWindow):
         """
         Add the GUI elements to the window that represent the home state of the application.
         """
+        toolbar = self.addToolBar("File")
+        save = QAction(QIcon("icon_save.png"), "Save", self)
+        toolbar.addAction(save)
+        load = QAction(QIcon("icon_load.png"), "Load", self)
+        toolbar.addAction(load)
+        toolbar.addSeparator()
+        undo = QAction(QIcon("icon_undo.png"), "Undo", self)
+        toolbar.addAction(undo)
+        redo = QAction(QIcon("icon_redo.png"), "Redo", self)
+        toolbar.addAction(redo)
+        toolbar.actionTriggered[QAction].connect(self.toolbar_pressed)
+
         splitter = QSplitter(self)
         splitter.setOrientation(Qt.Vertical)
         splitter.setHandleWidth(16)
@@ -187,6 +206,44 @@ class MainWindow(QMainWindow):
 
         splitter.addWidget(scroll_area_tile_sel)
         self.setCentralWidget(splitter)
+
+    def toolbar_pressed(self, action):
+        """
+        Handle a button being pressed on the toolbar.
+        """
+        actions = {"Save": self.save, "Load": self.load,
+                   "Undo": self.undo, "Redo": self.redo}
+        actions[action.text()]()
+
+    def save(self):
+        filename = QFileDialog.getSaveFileName(
+            self, "Save tilemap to file", ".", "JSON file (*.json)")
+        if filename[0]:
+            with open(filename[0], "w") as output:
+                json.dump(self.encode_to_JSON(), output)
+
+    def load(self):
+        pass
+
+    def undo(self):
+        pass
+
+    def redo(self):
+        pass
+
+    def encode_to_JSON(self):
+        rdict = dict()
+        rdict["width"] = self.size[0]
+        rdict["height"] = self.size[1]
+        rdict["tile_width"] = self.tile_size[0]
+        rdict["tile_height"] = self.tile_size[1]
+        rdict["selected_tile"] = self.tile
+        rdict["tile_image"] = self.tile_image
+        rdict["tile_data"] = self.tile_ed.encode_to_JSON()
+        return rdict
+
+    def decode_to_JSON(self, json):
+        pass
 
     @property
     def tile(self):
