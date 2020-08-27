@@ -18,12 +18,15 @@ class TileSelector(QWidget):
     def __init__(self, tile_size, pixmap, main, parent=None):
         super(TileSelector, self).__init__(parent)
 
+        self.main = main
+        self.reset(tile_size, pixmap, 4.0)
+
+    def reset(self, tile_size, pixmap, scale):
         self.tilemap_size = (pixmap.size().width() /
                              tile_size[0], pixmap.size().height() / tile_size[1])
         self.tile_size = tile_size
         self.pixmap = pixmap
-        self.main = main
-        self.scale = 4.0
+        self.scale = scale
 
         self.setFixedSize(pixmap.size() * self.scale)
         self.setMaximumSize(pixmap.size() * self.scale)
@@ -72,26 +75,39 @@ class TileSelector(QWidget):
         self.update()
         return super().mousePressEvent(event)
 
+    def encode_to_JSON(self):
+        rdict = dict()
+        rdict["scale"] = self.scale
+        return rdict
+
+    def decode_from_JSON(self, json, tile_size, pixmap):
+        self.scale = json["scale"]
+        self.reset(tile_size, pixmap, self.scale)
+
 
 class TileEd(QWidget):
     def __init__(self, size, tile_size, pixmap, main, parent=None):
         super(TileEd, self).__init__(parent)
 
+        self.main = main
+        self.drawing = False
+
+        self.reset(size, tile_size, pixmap, [0, ] * (size[0] * size[1]))
+
+    def reset(self, size, tile_size, pixmap, data):
         self.size = size
         self.tile_size = tile_size
         self.pixmap = pixmap
-        self.main = main
-        self.data = [0, ] * (self.size[0] * self.size[1])
+        self.data = data
         self.tilemap_size = (pixmap.size().width() /
                              tile_size[0], pixmap.size().height() / tile_size[1])
-
-        self.drawing = False
-        self.curr_tile = 1
 
         self.setFixedSize(
             self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
         self.setMaximumSize(
             self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
+
+        self.update()
 
     def sizeHint(self):
         return QSize(self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
@@ -152,6 +168,10 @@ class TileEd(QWidget):
         rdict["data"] = self.data
         return rdict
 
+    def decode_from_JSON(self, json, size, tile_size, pixmap):
+        self.data = json["data"]
+        self.reset(size, tile_size, pixmap, self.data)
+
 
 class MainWindow(QMainWindow):
     """
@@ -161,13 +181,16 @@ class MainWindow(QMainWindow):
     def __init__(self, size, tile_size, tile_image, parent=None):
         super(MainWindow, self).__init__(parent)
 
+        self.reset(size, tile_size, tile_image, 0)
+        self.home()
+
+    def reset(self, size, tile_size, tile_image, tile):
         self.tile_image = tile_image
         self.size = size
         self.tile_size = tile_size
         self.pixmap = QPixmap(tile_image)
-        self._tile = 0
-
-        self.home()
+        self._tile = tile
+        self.update()
 
     def home(self):
         """
@@ -220,10 +243,14 @@ class MainWindow(QMainWindow):
             self, "Save tilemap to file", ".", "JSON file (*.json)")
         if filename[0]:
             with open(filename[0], "w") as output:
-                json.dump(self.encode_to_JSON(), output)
+                json.dump(self.encode_to_JSON(), output, indent=4)
 
     def load(self):
-        pass
+        filename = QFileDialog.getOpenFileName(
+            self, "Open a tilemap file", ".", "JSON file (*.json)")
+        if filename[0]:
+            with open(filename[0], "r") as input:
+                self.decode_from_JSON(json.load(input))
 
     def undo(self):
         pass
@@ -240,10 +267,19 @@ class MainWindow(QMainWindow):
         rdict["selected_tile"] = self.tile
         rdict["tile_image"] = self.tile_image
         rdict["tile_data"] = self.tile_ed.encode_to_JSON()
+        rdict["tile_sel"] = self.tile_sel.encode_to_JSON()
         return rdict
 
-    def decode_to_JSON(self, json):
-        pass
+    def decode_from_JSON(self, json):
+        self.size = (json["width"], json["height"])
+        self.tile_size = (json["tile_width"], json["tile_height"])
+        self.tile = json["selected_tile"]
+        self.tile_image = json["tile_image"]
+        self.reset(self.size, self.tile_size, self.tile_image, self.tile)
+        self.tile_ed.decode_from_JSON(
+            json["tile_data"], self.size, self.tile_size, self.pixmap)
+        self.tile_sel.decode_from_JSON(
+            json["tile_sel"], self.tile_size, self.pixmap)
 
     @property
     def tile(self):
