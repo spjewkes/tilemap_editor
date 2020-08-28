@@ -12,7 +12,7 @@ import copy
 from PySide2 import QtCore
 from PySide2.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QMainWindow, \
     QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog, QStatusBar
-from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor
+from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor, QKeySequence
 from PySide2.QtCore import Qt, QTimer, QSize, QPoint
 
 
@@ -286,13 +286,17 @@ class MainWindow(QMainWindow):
         """
         toolbar = self.addToolBar("File")
         save = QAction(QIcon("res/icon_save.png"), "Save", self)
+        save.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_S))
         toolbar.addAction(save)
         load = QAction(QIcon("res/icon_load.png"), "Load", self)
+        load.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_O))
         toolbar.addAction(load)
         toolbar.addSeparator()
         undo = QAction(QIcon("res/icon_undo.png"), "Undo", self)
+        undo.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Z))
         toolbar.addAction(undo)
         redo = QAction(QIcon("res/icon_redo.png"), "Redo", self)
+        redo.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Y))
         toolbar.addAction(redo)
         toolbar.addSeparator()
         zoom_in = QAction(QIcon("res/icon_zoom_in.png"), "Zoom In", self)
