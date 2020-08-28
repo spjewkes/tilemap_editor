@@ -117,6 +117,7 @@ class TileEd(QWidget):
 
         self.main = main
         self.drawing = False
+        self.scale = 1.0
 
         self.reset(size, tile_size, pixmap, [0, ] * (size[0] * size[1]))
 
@@ -128,12 +129,14 @@ class TileEd(QWidget):
         self.tilemap_size = (pixmap.size().width() /
                              tile_size[0], pixmap.size().height() / tile_size[1])
 
-        self.setFixedSize(
-            self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
-        self.setMaximumSize(
-            self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
-
+        self.update_size()
         self.update()
+
+    def update_size(self):
+        self.setFixedSize(
+            self.size[0] * self.tile_size[0] * self.scale, self.size[1] * self.tile_size[1] * self.scale)
+        self.setMaximumSize(
+            self.size[0] * self.tile_size[0] * self.scale, self.size[1] * self.tile_size[1] * self.scale)
 
     def undo(self):
         self.data_store.undo()
@@ -141,6 +144,18 @@ class TileEd(QWidget):
 
     def redo(self):
         self.data_store.redo()
+        self.update()
+
+    def zoom_in(self):
+        if self.scale < 8.0:
+            self.scale += 0.25
+        self.update_size()
+        self.update()
+
+    def zoom_out(self):
+        if self.scale > 0.5:
+            self.scale -= 0.25
+        self.update_size()
         self.update()
 
     def sizeHint(self):
@@ -171,18 +186,18 @@ class TileEd(QWidget):
             for x in range(self.size[0]):
                 tile = self.get_tile(x, y)
                 posx, posy = self.get_tile_map_coords(tile)
-                painter.drawPixmap(x * self.tile_size[0], y * self.tile_size[1],
-                                   self.pixmap, posx, posy, self.tile_size[0], self.tile_size[1])
+                painter.drawPixmap(x * self.tile_size[0] * self.scale, y * self.tile_size[1] * self.scale, self.tile_size[0]
+                                   * self.scale, self.tile_size[1] * self.scale, self.pixmap, posx, posy, self.tile_size[0], self.tile_size[1])
                 painter.drawRect(
-                    x * self.tile_size[0], y * self.tile_size[1], self.tile_size[0], self.tile_size[1])
+                    x * self.tile_size[0] * self.scale, y * self.tile_size[1] * self.scale, self.tile_size[0] * self.scale, self.tile_size[1] * self.scale)
 
         painter.end()
 
     def mousePressEvent(self, event):
         self.drawing = True
         self.data_store.create_copy()
-        x = int(event.localPos().x() // self.tile_size[0])
-        y = int(event.localPos().y() // self.tile_size[1])
+        x = int(event.localPos().x() // self.tile_size[0] // self.scale)
+        y = int(event.localPos().y() // self.tile_size[1] // self.scale)
         self.set_tile(x, y, self.main.tile)
         self.update()
         return super().mousePressEvent(event)
@@ -192,8 +207,8 @@ class TileEd(QWidget):
         return super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
-        x = int(event.localPos().x() // self.tile_size[0])
-        y = int(event.localPos().y() // self.tile_size[1])
+        x = int(event.localPos().x() // self.tile_size[0] // self.scale)
+        y = int(event.localPos().y() // self.tile_size[1] // self.scale)
         self.set_tile(x, y, self.main.tile)
         self.update()
         return super().mouseMoveEvent(event)
@@ -241,6 +256,11 @@ class MainWindow(QMainWindow):
         toolbar.addAction(undo)
         redo = QAction(QIcon("icon_redo.png"), "Redo", self)
         toolbar.addAction(redo)
+        toolbar.addSeparator()
+        zoom_in = QAction(QIcon("icon_zoom_in.png"), "Zoom In", self)
+        toolbar.addAction(zoom_in)
+        zoom_out = QAction(QIcon("icon_zoom_out.png"), "Zoom Out", self)
+        toolbar.addAction(zoom_out)
         toolbar.actionTriggered[QAction].connect(self.toolbar_pressed)
 
         splitter = QSplitter(self)
@@ -270,7 +290,8 @@ class MainWindow(QMainWindow):
         Handle a button being pressed on the toolbar.
         """
         actions = {"Save": self.save, "Load": self.load,
-                   "Undo": self.undo, "Redo": self.redo}
+                   "Undo": self.undo, "Redo": self.redo,
+                   "Zoom In": self.zoom_in, "Zoom Out": self.zoom_out}
         actions[action.text()]()
 
     def save(self):
@@ -292,6 +313,12 @@ class MainWindow(QMainWindow):
 
     def redo(self):
         self.tile_ed.redo()
+
+    def zoom_in(self):
+        self.tile_ed.zoom_in()
+
+    def zoom_out(self):
+        self.tile_ed.zoom_out()
 
     def encode_to_JSON(self):
         rdict = dict()
