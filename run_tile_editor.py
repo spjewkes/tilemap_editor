@@ -11,7 +11,7 @@ import copy
 
 from PySide2 import QtCore
 from PySide2.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QMainWindow, \
-    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog
+    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog, QStatusBar
 from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor
 from PySide2.QtCore import Qt, QTimer, QSize, QPoint
 
@@ -119,6 +119,8 @@ class TileEd(QWidget):
         self.main = main
         self.drawing = False
         self.scale = 1.0
+
+        self.setMouseTracking(True)
 
         self.reset(size, tile_size, pixmap, [0, ] * (size[0] * size[1]))
 
@@ -238,8 +240,13 @@ class TileEd(QWidget):
     def mouseMoveEvent(self, event):
         x = int(event.localPos().x() // self.tile_size[0] // self.scale)
         y = int(event.localPos().y() // self.tile_size[1] // self.scale)
-        self.set_tile(x, y, self.main.tile)
-        self.update()
+
+        if self.drawing == True:
+            self.set_tile(x, y, self.main.tile)
+            self.update()
+
+        self.main.statusBar().showMessage("Tile Pos: {},{}".format(x, y))
+
         return super().mouseMoveEvent(event)
 
     def encode_to_JSON(self):
@@ -259,6 +266,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self, size, tile_size, tile_image, parent=None):
         super(MainWindow, self).__init__(parent)
+
+        self.setStatusBar(QStatusBar())
 
         self.reset(size, tile_size, tile_image, 0)
         self.home()
