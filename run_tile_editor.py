@@ -6,12 +6,38 @@ Application that runs the landscape generator program.
 """
 import sys
 import json
+import copy
 
 from PySide2 import QtCore
 from PySide2.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QMainWindow, \
     QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog
 from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor
 from PySide2.QtCore import Qt, QTimer, QSize, QPoint
+
+
+class UndoRedo:
+    def __init__(self, init_data):
+        self.index = 0
+        self.store = []
+        self.store.append(init_data)
+
+    @property
+    def data(self):
+        return self.store[self.index]
+
+    def create_copy(self):
+        while len(self.store) - 1 > self.index:
+            self.store.pop()
+        self.store.append(copy.deepcopy(self.store[self.index]))
+        self.index += 1
+
+    def undo(self):
+        if self.index > 0:
+            self.index -= 1
+
+    def redo(self):
+        if self.index + 1 < len(self.store):
+            self.index += 1
 
 
 class TileSelector(QWidget):
@@ -98,7 +124,7 @@ class TileEd(QWidget):
         self.size = size
         self.tile_size = tile_size
         self.pixmap = pixmap
-        self.data = data
+        self.data_store = UndoRedo(data)
         self.tilemap_size = (pixmap.size().width() /
                              tile_size[0], pixmap.size().height() / tile_size[1])
 
@@ -109,14 +135,22 @@ class TileEd(QWidget):
 
         self.update()
 
+    def undo(self):
+        self.data_store.undo()
+        self.update()
+
+    def redo(self):
+        self.data_store.redo()
+        self.update()
+
     def sizeHint(self):
         return QSize(self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
 
     def get_tile(self, x, y):
-        return self.data[(y * self.size[0]) + x]
+        return self.data_store.data[(y * self.size[0]) + x]
 
     def set_tile(self, x, y, value):
-        self.data[(y * self.size[0]) + x] = value
+        self.data_store.data[(y * self.size[0]) + x] = value
 
     def get_tile_map_coords(self, tile):
         x = (tile % self.tilemap_size[0]) * self.tile_size[0]
@@ -146,6 +180,7 @@ class TileEd(QWidget):
 
     def mousePressEvent(self, event):
         self.drawing = True
+        self.data_store.create_copy()
         x = int(event.localPos().x() // self.tile_size[0])
         y = int(event.localPos().y() // self.tile_size[1])
         self.set_tile(x, y, self.main.tile)
@@ -165,12 +200,12 @@ class TileEd(QWidget):
 
     def encode_to_JSON(self):
         rdict = dict()
-        rdict["data"] = self.data
+        rdict["data"] = self.data_store.data
         return rdict
 
     def decode_from_JSON(self, json, size, tile_size, pixmap):
-        self.data = json["data"]
-        self.reset(size, tile_size, pixmap, self.data)
+        data = json["data"]
+        self.reset(size, tile_size, pixmap, data)
 
 
 class MainWindow(QMainWindow):
@@ -253,10 +288,10 @@ class MainWindow(QMainWindow):
                 self.decode_from_JSON(json.load(input))
 
     def undo(self):
-        pass
+        self.tile_ed.undo()
 
     def redo(self):
-        pass
+        self.tile_ed.redo()
 
     def encode_to_JSON(self):
         rdict = dict()
