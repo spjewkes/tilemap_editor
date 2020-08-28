@@ -130,6 +130,12 @@ class TileEd(QWidget):
         self.tilemap_size = (pixmap.size().width() /
                              tile_size[0], pixmap.size().height() / tile_size[1])
 
+        self.tile_coords = dict()
+        for tile in range(int(self.tilemap_size[0] * self.tilemap_size[1])):
+            x = (tile % self.tilemap_size[0]) * self.tile_size[0]
+            y = (tile // self.tilemap_size[1]) * self.tile_size[1]
+            self.tile_coords[tile] = (x, y)
+
         self.update_size()
         self.update()
 
@@ -159,6 +165,13 @@ class TileEd(QWidget):
         self.update_size()
         self.update()
 
+    def clear(self, tile):
+        self.data_store.create_copy()
+        for y in range(self.size[1]):
+            for x in range(self.size[0]):
+                self.set_tile(x, y, tile)
+        self.update()
+
     def sizeHint(self):
         return QSize(self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
 
@@ -169,9 +182,7 @@ class TileEd(QWidget):
         self.data_store.data[(y * self.size[0]) + x] = value
 
     def get_tile_map_coords(self, tile):
-        x = (tile % self.tilemap_size[0]) * self.tile_size[0]
-        y = (tile // self.tilemap_size[1]) * self.tile_size[1]
-        return x, y
+        return self.tile_coords[tile]
 
     def paintEvent(self, event):
         """
@@ -180,8 +191,6 @@ class TileEd(QWidget):
         super(TileEd, self).paintEvent(event)
 
         painter = QPainter(self)
-
-        painter.setPen(QColor(127, 127, 127))
 
         for y in range(self.size[1]):
             for x in range(self.size[0]):
@@ -262,6 +271,9 @@ class MainWindow(QMainWindow):
         toolbar.addAction(zoom_in)
         zoom_out = QAction(QIcon("icon_zoom_out.png"), "Zoom Out", self)
         toolbar.addAction(zoom_out)
+        toolbar.addSeparator()
+        clear = QAction(QIcon("icon_clear.png"), "Clear", self)
+        toolbar.addAction(clear)
         toolbar.actionTriggered[QAction].connect(self.toolbar_pressed)
 
         splitter = QSplitter(self)
@@ -292,7 +304,8 @@ class MainWindow(QMainWindow):
         """
         actions = {"Save": self.save, "Load": self.load,
                    "Undo": self.undo, "Redo": self.redo,
-                   "Zoom In": self.zoom_in, "Zoom Out": self.zoom_out}
+                   "Zoom In": self.zoom_in, "Zoom Out": self.zoom_out,
+                   "Clear": self.clear}
         actions[action.text()]()
 
     def save(self):
@@ -320,6 +333,9 @@ class MainWindow(QMainWindow):
 
     def zoom_out(self):
         self.tile_ed.zoom_out()
+
+    def clear(self):
+        self.tile_ed.clear(self.tile)
 
     def encode_to_JSON(self):
         rdict = dict()
