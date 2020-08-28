@@ -192,8 +192,27 @@ class TileEd(QWidget):
 
         painter = QPainter(self)
 
-        for y in range(self.size[1]):
-            for x in range(self.size[0]):
+        painter.setPen(QColor(127, 127, 127))
+
+        # Only update the region that need updating
+        x1 = int(event.rect().x() // self.scale // self.tile_size[0]) - 1
+        y1 = int(event.rect().y() // self.scale // self.tile_size[1]) - 1
+        x2 = int(event.rect().width() // self.scale //
+                 self.tile_size[0]) + x1 + 3
+        y2 = int(event.rect().height() // self.scale //
+                 self.tile_size[1]) + y1 + 3
+
+        if x1 < 0:
+            x1 = 0
+        if y1 < 0:
+            y1 = 0
+        if x2 > self.size[0]:
+            x2 = self.size[0]
+        if y2 > self.size[1]:
+            y2 = self.size[1]
+
+        for y in range(y1, y2):
+            for x in range(x1, x2):
                 tile = self.get_tile(x, y)
                 posx, posy = self.get_tile_map_coords(tile)
                 painter.drawPixmap(x * self.tile_size[0] * self.scale, y * self.tile_size[1] * self.scale, self.tile_size[0]
