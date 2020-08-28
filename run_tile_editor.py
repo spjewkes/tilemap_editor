@@ -120,6 +120,7 @@ class TileEd(QWidget):
         self.drawing = False
         self.scale = 1.0
         self.is_changed = False
+        self.show_grid = True
 
         self.setMouseTracking(True)
 
@@ -186,6 +187,10 @@ class TileEd(QWidget):
                 self.set_tile(x, y, tile)
         self.update()
 
+    def grid(self):
+        self.show_grid = not self.show_grid
+        self.update()
+
     def sizeHint(self):
         return QSize(self.size[0] * self.tile_size[0], self.size[1] * self.tile_size[1])
 
@@ -231,8 +236,10 @@ class TileEd(QWidget):
                 posx, posy = self.get_tile_map_coords(tile)
                 painter.drawPixmap(x * self.tile_size[0] * self.scale, y * self.tile_size[1] * self.scale, self.tile_size[0]
                                    * self.scale, self.tile_size[1] * self.scale, self.pixmap, posx, posy, self.tile_size[0], self.tile_size[1])
-                painter.drawRect(
-                    x * self.tile_size[0] * self.scale, y * self.tile_size[1] * self.scale, self.tile_size[0] * self.scale, self.tile_size[1] * self.scale)
+
+                if self.show_grid:
+                    painter.drawRect(
+                        x * self.tile_size[0] * self.scale, y * self.tile_size[1] * self.scale, self.tile_size[0] * self.scale, self.tile_size[1] * self.scale)
 
         painter.end()
 
@@ -319,6 +326,9 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         clear = QAction(QIcon("res/icon_clear.png"), "Clear", self)
         toolbar.addAction(clear)
+        toolbar.addSeparator()
+        grid = QAction(QIcon("res/icon_grid.png"), "Grid", self)
+        toolbar.addAction(grid)
         toolbar.actionTriggered[QAction].connect(self.toolbar_pressed)
 
         splitter = QSplitter(self)
@@ -350,7 +360,7 @@ class MainWindow(QMainWindow):
         actions = {"Save": self.save, "Load": self.load,
                    "Undo": self.undo, "Redo": self.redo,
                    "Zoom In": self.zoom_in, "Zoom Out": self.zoom_out,
-                   "Clear": self.clear}
+                   "Clear": self.clear, "Grid": self.grid}
         actions[action.text()]()
 
     def save(self):
@@ -383,6 +393,9 @@ class MainWindow(QMainWindow):
 
     def clear(self):
         self.tile_ed.clear(self.tile)
+
+    def grid(self):
+        self.tile_ed.grid()
 
     def closeEvent(self, event):
         if self.tile_ed.changed:
