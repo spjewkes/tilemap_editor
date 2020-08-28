@@ -11,7 +11,7 @@ import copy
 
 from PySide2 import QtCore
 from PySide2.QtWidgets import QApplication, QVBoxLayout, QHBoxLayout, QWidget, QMainWindow, \
-    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog, QStatusBar
+    QAction, QSlider, QDialog, QLabel, QScrollArea, QSplitter, QFileDialog, QStatusBar, QMessageBox
 from PySide2.QtGui import QIcon, QPainter, QPalette, QPixmap, QColor, QKeySequence
 from PySide2.QtCore import Qt, QTimer, QSize, QPoint
 
@@ -119,6 +119,7 @@ class TileEd(QWidget):
         self.main = main
         self.drawing = False
         self.scale = 1.0
+        self.is_changed = False
 
         self.setMouseTracking(True)
 
@@ -147,11 +148,21 @@ class TileEd(QWidget):
         self.setMaximumSize(
             self.size[0] * self.tile_size[0] * self.scale, self.size[1] * self.tile_size[1] * self.scale)
 
+    @property
+    def changed(self):
+        return self.is_changed
+
+    @changed.setter
+    def changed(self, value):
+        self.is_changed = value
+
     def undo(self):
+        self.is_changed = True
         self.data_store.undo()
         self.update()
 
     def redo(self):
+        self.is_changed = True
         self.data_store.redo()
         self.update()
 
@@ -168,6 +179,7 @@ class TileEd(QWidget):
         self.update()
 
     def clear(self, tile):
+        self.is_changed = True
         self.data_store.create_copy()
         for y in range(self.size[1]):
             for x in range(self.size[0]):
@@ -226,6 +238,7 @@ class TileEd(QWidget):
 
     def mousePressEvent(self, event):
         self.drawing = True
+        self.is_changed = True
         self.data_store.create_copy()
         x = int(event.localPos().x() // self.tile_size[0] // self.scale)
         y = int(event.localPos().y() // self.tile_size[1] // self.scale)
@@ -346,6 +359,7 @@ class MainWindow(QMainWindow):
         if filename[0]:
             with open(filename[0], "w") as output:
                 json.dump(self.encode_to_JSON(), output, indent=4)
+                self.tile_ed.changed = False
 
     def load(self):
         filename = QFileDialog.getOpenFileName(
@@ -353,6 +367,7 @@ class MainWindow(QMainWindow):
         if filename[0]:
             with open(filename[0], "r") as input:
                 self.decode_from_JSON(json.load(input))
+                self.tile_ed.changed = False
 
     def undo(self):
         self.tile_ed.undo()
@@ -368,6 +383,22 @@ class MainWindow(QMainWindow):
 
     def clear(self):
         self.tile_ed.clear(self.tile)
+
+    def closeEvent(self, event):
+        if self.tile_ed.changed:
+            msg_box = QMessageBox()
+            msg_box.setText("The tilemap has been modified.")
+            msg_box.setInformativeText(
+                "Do you want to quit without saving your changes?")
+            msg_box.setStandardButtons(
+                QMessageBox.Discard | QMessageBox.Cancel)
+            msg_box.setDefaultButton(QMessageBox.Cancel)
+            ret = msg_box.exec()
+
+            if ret == QMessageBox.Cancel:
+                event.ignore()
+            else:
+                event.accept()
 
     def encode_to_JSON(self):
         rdict = dict()
