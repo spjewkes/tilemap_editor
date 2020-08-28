@@ -4,6 +4,7 @@
 """
 Application that runs the landscape generator program.
 """
+import argparse
 import sys
 import json
 import copy
@@ -353,10 +354,20 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Edit a tilemap using a supplied tileset image.')
+    parser.add_argument('--tiles', metavar="N", type=int, default=[64, 64],
+                        nargs=2, help="Size of tilemap")
+    parser.add_argument('--tilesize', metavar="N", type=int, default=[16, 16],
+                        nargs=2, help="Size of tile in pixels")
+    parser.add_argument('--tileset', metavar="FILE", type=str, default="map_tiles.png",
+                        help="Name of tileset to use")
+    args = parser.parse_args()
+
     # Create the Qt Application
     APP = QApplication(sys.argv)
     # Create and show the form
-    MAIN = MainWindow((64, 64), (16, 16), "map_tiles.png")
+    MAIN = MainWindow(args.tiles, args.tilesize, args.tileset)
     MAIN.show()
     # Run the main Qt loop
     sys.exit(APP.exec_())
