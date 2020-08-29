@@ -452,7 +452,7 @@ if __name__ == "__main__":
                         nargs=2, help="Size of tilemap")
     parser.add_argument('--tilesize', metavar="N", type=int, default=[16, 16],
                         nargs=2, help="Size of tile in pixels")
-    parser.add_argument('--tileset', metavar="FILE", type=str, default="map_tiles.png",
+    parser.add_argument('--tileset', metavar="FILE", type=str, default="res/default_map_tiles.png",
                         help="Name of tileset to use")
     args = parser.parse_args()
 
